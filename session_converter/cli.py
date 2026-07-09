@@ -29,7 +29,7 @@ def cli() -> None:
 @cli.command()
 @click.argument('input_file', type=click.Path(exists=True, path_type=Path))
 @click.option('-o', '--output', type=click.Path(path_type=Path), help='Output file path')
-@click.option('--to', 'target_format', type=click.Choice(['claude', 'codex']), required=True, help='Target format (required)')
+@click.option('--to', 'target_format', type=click.Choice(['claude', 'codex', 'cursor', 'pi', 'opencode']), required=True, help='Target format (required)')
 @click.option('--pretty', is_flag=True, help='Pretty-print JSON output')
 @click.option('--validate', is_flag=True, help='Validate output after conversion')
 @click.option('--stats', is_flag=True, help='Show conversion statistics')
@@ -46,12 +46,19 @@ def convert(
     """Convert session to specified format (auto-detects source format).
     
     This is the recommended command for converting sessions. It automatically
-    detects whether your input is Claude Code or Codex CLI format and converts
-    to your specified target format.
+    detects the source format and converts to your specified target format.
+    
+    Supported formats:
+        - claude: Claude Code format
+        - codex: OpenAI Codex CLI format
+        - cursor: Cursor IDE format
+        - pi: Pi AI assistant format  
+        - opencode: OpenCode format
     
     Examples:
         session-convert convert input.jsonl --to codex -o output.jsonl
-        session-convert convert input.jsonl --to claude -o output.jsonl
+        session-convert convert input.jsonl --to cursor -o output.jsonl
+        session-convert convert input.jsonl --to pi -o output.jsonl
     """
     # Detect source format
     source_format = detect_format(input_file)
@@ -171,15 +178,26 @@ def _convert_session(
         if verbose:
             console.print(f"[cyan]Reading:[/cyan] {input_file}")
         
-        # Parse input
-        if source_format == 'claude':
-            parser = ClaudeParser()
-            session = parser.parse(input_file)
-            warnings = parser.warnings
-        else:
-            parser = CodexParser()
-            session = parser.parse(input_file)
-            warnings = parser.warnings
+        # Import parsers
+        from .parsers import ClaudeParser, CodexParser, CursorParser, PiParser, OpenCodeParser
+        
+        # Parse input based on source format
+        parser_map = {
+            'claude': ClaudeParser,
+            'codex': CodexParser,
+            'cursor': CursorParser,
+            'pi': PiParser,
+            'opencode': OpenCodeParser,
+        }
+        
+        parser_class = parser_map.get(source_format)
+        if not parser_class:
+            console.print(f"[red]Error:[/red] Unsupported source format: {source_format}")
+            sys.exit(1)
+        
+        parser = parser_class()
+        session = parser.parse(input_file)
+        warnings = parser.warnings
         
         if verbose:
             console.print(f"[green]✓[/green] Parsed {source_format.title()} format")
@@ -187,12 +205,24 @@ def _convert_session(
             console.print(f"  Turns: {session.get_turn_count()}")
             console.print(f"  Tool calls: {session.get_tool_call_count()}")
         
-        # Convert to target format
-        if target_format == 'codex':
-            emitter = CodexEmitter()
-        else:
-            emitter = ClaudeEmitter()
+        # Import emitters
+        from .emitters import ClaudeEmitter, CodexEmitter, CursorEmitter, PiEmitter, OpenCodeEmitter
         
+        # Convert to target format
+        emitter_map = {
+            'claude': ClaudeEmitter,
+            'codex': CodexEmitter,
+            'cursor': CursorEmitter,
+            'pi': PiEmitter,
+            'opencode': OpenCodeEmitter,
+        }
+        
+        emitter_class = emitter_map.get(target_format)
+        if not emitter_class:
+            console.print(f"[red]Error:[/red] Unsupported target format: {target_format}")
+            sys.exit(1)
+        
+        emitter = emitter_class()
         events = emitter.emit(session)
         
         if verbose:
