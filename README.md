@@ -1,18 +1,18 @@
 # Session Converter
 
-A powerful CLI tool to convert AI assistant sessions between Claude Code and OpenAI Codex CLI formats.
+A powerful CLI tool to convert AI assistant sessions between multiple formats: Claude Code, Codex CLI, Cursor IDE, Pi AI, and OpenCode.
 
 ## Features
 
-- 🤖 **Auto-Detection**: Automatically detects source format (Claude Code or Codex CLI)
+- 🤖 **Auto-Detection**: Automatically detects source format from 5 supported formats
 - 🎯 **Explicit Target**: Specify output format for clarity and extensibility
-- 🔄 **Bidirectional Conversion**: Convert sessions between Claude Code ↔ Codex CLI formats
+- 🔄 **Multi-Format Support**: Convert between Claude, Codex, Cursor, Pi, and OpenCode
 - ✅ **Validation**: Validate session file formats
 - 📊 **Statistics**: View detailed session information and conversion stats
 - 🚀 **Batch Processing**: Convert entire directories of session files
 - 🎯 **High Fidelity**: Preserves tool calls, thinking blocks, and metadata
 - 🛡️ **Type Safe**: Built with Pydantic for robust schema validation
-- 🔮 **Future-Ready**: Designed for easy addition of new formats (Cursor, Aider, etc.)
+- 🔮 **Extensible**: Easily add new formats to the converter
 
 ## Installation
 
@@ -34,6 +34,9 @@ pip install -e .
 # Convert session (auto-detects source, specify target) - RECOMMENDED
 session-convert convert input.jsonl --to codex -o output.jsonl
 session-convert convert input.jsonl --to claude -o output.jsonl
+session-convert convert input.jsonl --to cursor -o output.jsonl
+session-convert convert input.jsonl --to pi -o output.jsonl
+session-convert convert input.jsonl --to opencode -o output.jsonl
 
 # Show session information
 session-convert info input.jsonl
@@ -49,6 +52,8 @@ session-convert claude-to-codex input.jsonl -o output.jsonl
 session-convert codex-to-claude input.jsonl -o output.jsonl
 ```
 
+**Supported formats:** `claude`, `codex`, `cursor`, `pi`, `opencode`
+
 ## Usage
 
 ### Commands
@@ -60,12 +65,12 @@ session-convert codex-to-claude input.jsonl -o output.jsonl
 session-convert convert <input.jsonl> --to <target-format> [OPTIONS]
 
 Options:
-  -o, --output PATH       Output file path (default: stdout)
-  --to [claude|codex]    Target format (REQUIRED)
-  --pretty               Pretty-print JSON output
-  --validate            Validate output after conversion
-  --stats               Show conversion statistics
-  -v, --verbose         Verbose logging
+  -o, --output PATH                              Output file path (default: stdout)
+  --to [claude|codex|cursor|pi|opencode]        Target format (REQUIRED)
+  --pretty                                       Pretty-print JSON output
+  --validate                                     Validate output after conversion
+  --stats                                        Show conversion statistics
+  -v, --verbose                                  Verbose logging
 ```
 
 **Examples:**
@@ -76,14 +81,23 @@ session-convert convert my-session.jsonl --to codex -o output.jsonl
 # Auto-detect source, convert to Claude
 session-convert convert my-session.jsonl --to claude -o output.jsonl
 
+# Convert to Cursor IDE format
+session-convert convert my-session.jsonl --to cursor -o output.jsonl
+
+# Convert to Pi AI format
+session-convert convert my-session.jsonl --to pi -o output.jsonl
+
+# Convert to OpenCode format
+session-convert convert my-session.jsonl --to opencode -o output.jsonl
+
 # With verbose output showing detection
 session-convert convert my-session.jsonl --to codex -o output.jsonl --stats -v
 ```
 
 **Why this design?**
-- 🔍 **Auto-detects source**: No need to know if input is Claude or Codex
+- 🔍 **Auto-detects source**: Supports Claude, Codex, Cursor, Pi, and OpenCode
 - 🎯 **Explicit target**: Clear about what you want as output
-- 🚀 **Extensible**: Ready for future formats (Cursor, Aider, etc.)
+- 🚀 **Extensible**: Easy to add new formats in the future
 
 #### `claude-to-codex`
 Explicitly convert Claude Code session to Codex CLI format.

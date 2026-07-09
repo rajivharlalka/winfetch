@@ -56,16 +56,21 @@ def generate_uuid() -> str:
 
 
 def detect_format(file_path: Path) -> Optional[str]:
-    """Detect the session format (claude or codex).
+    """Detect the session format.
     
     Returns:
-        'claude' if Claude Code format detected
-        'codex' if Codex CLI format detected
+        Format name: 'claude', 'codex', 'cursor', 'pi', 'opencode'
         None if format cannot be determined
     """
     try:
-        claude_indicators = 0
-        codex_indicators = 0
+        indicators = {
+            'claude': 0,
+            'codex': 0,
+            'cursor': 0,
+            'pi': 0,
+            'opencode': 0,
+        }
+        
         lines_checked = 0
         max_lines = 5  # Check first 5 lines for confidence
         
@@ -74,35 +79,60 @@ def detect_format(file_path: Path) -> Optional[str]:
             
             # Claude format indicators
             if 'uuid' in record and 'parentUuid' in record:
-                claude_indicators += 2
+                indicators['claude'] += 2
             if 'sessionId' in record and record.get('type') in ['user', 'assistant', 'system']:
-                claude_indicators += 2
+                indicators['claude'] += 2
             if 'gitBranch' in record:
-                claude_indicators += 1
-            if 'message' in record and 'content' in record.get('message', {}):
-                claude_indicators += 1
+                indicators['claude'] += 1
             
             # Codex format indicators
             if record.get('type') == 'session_meta' and 'payload' in record:
-                codex_indicators += 5  # Strong indicator
+                indicators['codex'] += 5  # Strong indicator
             if record.get('type') in ['turn_context', 'response_item', 'input_item', 'event_msg']:
-                codex_indicators += 2
+                indicators['codex'] += 2
             if 'payload' in record:
                 payload = record.get('payload', {})
                 if 'originator' in payload or 'cli_version' in payload:
-                    codex_indicators += 2
+                    indicators['codex'] += 2
+            
+            # Pi format indicators
+            if record.get('type') == 'header' and 'workingDirectory' in record:
+                indicators['pi'] += 5  # Strong indicator
+            if record.get('type') in ['message', 'compaction', 'branch_summary'] and 'parentId' in record:
+                indicators['pi'] += 3
+            if 'id' in record and 'parentId' in record and record.get('type') == 'message':
+                indicators['pi'] += 2
+            
+            # Cursor format indicators
+            if 'composerId' in record and 'createdAt' in record:
+                indicators['cursor'] += 5  # Strong indicator
+            if 'bubbleId' in record and record.get('type') in [1, 2]:
+                indicators['cursor'] += 3
+            if 'rawText' in record or ('type' in record and record.get('type') in [1, 2]):
+                indicators['cursor'] += 2
+            
+            # OpenCode format indicators
+            if 'directory' in record and 'version' in record and 'created' in record:
+                indicators['opencode'] += 4
+            if record.get('role') in ['user', 'assistant', 'tool'] and 'content' in record:
+                indicators['opencode'] += 2
+            if 'slug' in record and 'projectID' in record:
+                indicators['opencode'] += 3
             
             # Stop after checking enough lines
             if lines_checked >= max_lines:
                 break
         
-        # Determine format based on indicators
-        if codex_indicators > claude_indicators:
-            return 'codex'
-        elif claude_indicators > codex_indicators:
-            return 'claude'
-        else:
+        # Find format with highest score
+        max_score = max(indicators.values())
+        if max_score == 0:
             return None
+        
+        for format_name, score in indicators.items():
+            if score == max_score and score > 1:  # Require at least score of 2
+                return format_name
+        
+        return None
     
     except Exception:
         return None
