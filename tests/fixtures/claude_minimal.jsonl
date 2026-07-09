@@ -1,0 +1,2 @@
+{"type":"user","uuid":"minimal-001","parentUuid":null,"sessionId":"minimal-session","timestamp":"2026-07-09T18:00:00.000Z","cwd":"/workspace","gitBranch":"main","version":"2.5.0","message":{"content":[{"type":"text","text":"Hello"}]}}
+{"type":"assistant","uuid":"minimal-002","parentUuid":"minimal-001","sessionId":"minimal-session","timestamp":"2026-07-09T18:00:01.000Z","cwd":"/workspace","gitBranch":"main","version":"2.5.0","message":{"content":[{"type":"text","text":"Hi there!"}]}}

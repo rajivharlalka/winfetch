@@ -1,0 +1,2 @@
+{"type":"user","uuid":"unicode-001","parentUuid":null,"sessionId":"unicode-session","timestamp":"2026-07-09T18:00:00.000Z","cwd":"/workspace","gitBranch":"main","version":"2.5.0","message":{"content":[{"type":"text","text":"こんにちは! Can you help with emojis? 🚀✨"}]}}
+{"type":"assistant","uuid":"unicode-002","parentUuid":"unicode-001","sessionId":"unicode-session","timestamp":"2026-07-09T18:00:02.000Z","cwd":"/workspace","gitBranch":"main","version":"2.5.0","message":{"content":[{"type":"text","text":"もちろん! I can help with Unicode: 你好, Привет, مرحبا 🎉🌟💻"}]}}
