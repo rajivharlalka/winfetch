@@ -4,57 +4,52 @@ The Session Converter now **automatically detects** whether your session file is
 
 ## How It Works
 
-Just use the `convert` command - no need to specify the source format:
+Use the `convert` command with explicit target - source format is auto-detected:
 
 ```bash
-# The tool figures out the format for you!
-session-convert convert my-session.jsonl -o output.jsonl
+# Specify what you want, tool detects what you have!
+session-convert convert my-session.jsonl --to codex -o output.jsonl
 ```
 
 ### What Happens
 
 1. **Analyzes first few lines** of your session file
 2. **Scores format indicators** (Claude vs Codex specific fields)
-3. **Determines format** with high confidence
-4. **Converts automatically** to the opposite format
+3. **Determines source format** with high confidence
+4. **Converts to your specified target** format
 5. **Shows you what it detected** (with `-v` flag)
 
 ## Usage Examples
 
-### Basic Auto-Detection
+### Basic Usage
 
 ```bash
-# Convert any session - format detected automatically
-session-convert convert input.jsonl -o output.jsonl
+# Convert to Codex (source auto-detected)
+session-convert convert input.jsonl --to codex -o output.jsonl
+
+# Convert to Claude (source auto-detected)
+session-convert convert input.jsonl --to claude -o output.jsonl
 ```
 
 ### With Verbose Output
 
 ```bash
-# See what format was detected
-session-convert convert input.jsonl -o output.jsonl -v
+# See what source format was detected
+session-convert convert input.jsonl --to codex -o output.jsonl -v
 ```
 
 Output:
 ```
-Detected format: Claude
-Target format: Codex
+Detected source format: Claude
+Converting to: Codex
 ✓ Conversion complete
-```
-
-### Specify Target Format
-
-```bash
-# Auto-detect source, but force target format
-session-convert convert input.jsonl --to codex -o output.jsonl
-session-convert convert input.jsonl --to claude -o output.jsonl
 ```
 
 ### With Statistics
 
 ```bash
 # Get detailed conversion stats
-session-convert convert input.jsonl -o output.jsonl --stats
+session-convert convert input.jsonl --to codex -o output.jsonl --stats
 ```
 
 ## Detection Algorithm
@@ -89,10 +84,10 @@ The format with the highest score wins!
 ### Claude Code Session
 
 ```bash
-$ session-convert convert ~/.claude/projects/my-proj/abc-123.jsonl -o output.jsonl -v
+$ session-convert convert ~/.claude/projects/my-proj/abc-123.jsonl --to codex -o output.jsonl -v
 
-Detected format: Claude
-Target format: Codex
+Detected source format: Claude
+Converting to: Codex
 ✓ Parsed Claude format
   Session ID: abc-123
   Turns: 15
@@ -104,10 +99,10 @@ Target format: Codex
 ### Codex CLI Session
 
 ```bash
-$ session-convert convert ~/.codex/sessions/2026/07/09/rollout-*.jsonl -o output.jsonl -v
+$ session-convert convert ~/.codex/sessions/2026/07/09/rollout-*.jsonl --to claude -o output.jsonl -v
 
-Detected format: Codex
-Target format: Claude
+Detected source format: Codex
+Converting to: Claude
 ✓ Parsed Codex format
   Session ID: session-456
   Turns: 12
@@ -121,7 +116,7 @@ Target format: Claude
 ### Same Format Detection
 
 ```bash
-$ session-convert convert claude-session.jsonl --to claude
+$ session-convert convert claude-session.jsonl --to claude -o output.jsonl
 
 Warning: Source and target formats are the same (claude)
 No conversion needed. Use 'session-convert info' to view session details.
@@ -130,12 +125,26 @@ No conversion needed. Use 'session-convert info' to view session details.
 ### Unknown Format
 
 ```bash
-$ session-convert convert unknown-file.jsonl -o output.jsonl
+$ session-convert convert unknown-file.jsonl --to codex -o output.jsonl
 
 Error: Could not detect session format
+
 Please specify formats explicitly using:
   session-convert claude-to-codex <file>
   session-convert codex-to-claude <file>
+```
+
+### Missing Target Format
+
+```bash
+$ session-convert convert input.jsonl -o output.jsonl
+
+Error: Missing option '--to'. Choose from: claude, codex
+```
+
+**Solution:** Always specify `--to`:
+```bash
+session-convert convert input.jsonl --to codex -o output.jsonl
 ```
 
 ## Fallback to Explicit Commands
@@ -203,22 +212,23 @@ The auto-detection algorithm has been tested with:
 
 ### Before (Manual Format Specification)
 ```bash
-# Had to remember which command to use
-session-convert claude-to-codex input.jsonl -o output.jsonl  # Was it claude-to-codex?
-session-convert codex-to-claude input.jsonl -o output.jsonl  # Or codex-to-claude?
+# Had to know both source and target formats
+session-convert claude-to-codex input.jsonl -o output.jsonl  # Is it Claude or Codex?
+session-convert codex-to-claude input.jsonl -o output.jsonl  # Which command to use?
 ```
 
 ### After (Auto-Detection) ⭐
 ```bash
-# Just convert - tool figures out the format!
-session-convert convert input.jsonl -o output.jsonl
+# Specify target, source auto-detected!
+session-convert convert input.jsonl --to codex -o output.jsonl
 ```
 
 **Advantages:**
-- 🎯 **Simpler**: One command instead of two
-- 🚀 **Faster**: No need to check format first
-- 🛡️ **Safer**: Prevents wrong format conversion
-- 🤖 **Smarter**: Handles both formats seamlessly
+- 🔍 **Auto-detects source**: No need to know input format
+- 🎯 **Explicit target**: Clear about what you want
+- 🚀 **Extensible**: Ready for future formats (Cursor, Aider, etc.)
+- 🛡️ **Safe**: Can't get wrong output format
+- 🤖 **Smart**: Best of both worlds
 
 ## Implementation
 
@@ -242,18 +252,19 @@ def detect_format(file_path: Path) -> Optional[str]:
 
 | Command | Use When |
 |---------|----------|
-| `convert` ⭐ | **Most cases** - auto-detects format |
-| `claude-to-codex` | You know it's Claude and want to be explicit |
-| `codex-to-claude` | You know it's Codex and want to be explicit |
+| `convert --to <format>` ⭐ | **Most cases** - auto-detects source, explicit target |
+| `claude-to-codex` | You want to be explicit about both source and target |
+| `codex-to-claude` | You want to be explicit about both source and target |
 | `info` | Just want to inspect the session |
 | `validate` | Check if format is valid |
 
 ## Recommendation
 
-**Always use `session-convert convert` unless:**
-- You have a specific reason to be explicit
-- Auto-detection fails (rare)
-- You're scripting and want deterministic behavior
+**Always use `session-convert convert --to <format>` because:**
+- ✅ Auto-detects source format (convenience)
+- ✅ Explicit target format (clarity)
+- ✅ Future-proof (extensible to new formats)
+- ✅ Clear intent (you specify what you want)
 
 ## Documentation
 
@@ -264,15 +275,21 @@ For more details, see:
 
 ## Summary
 
-✨ **Auto-detection makes the tool smarter and easier to use!**
+✨ **Auto-detection with explicit target = Perfect balance!**
 
 ```bash
-# Old way (2 commands to remember)
-session-convert claude-to-codex input.jsonl -o output.jsonl
-session-convert codex-to-claude input.jsonl -o output.jsonl
+# Old way (had to know source format)
+session-convert claude-to-codex input.jsonl -o output.jsonl  # Which one?
+session-convert codex-to-claude input.jsonl -o output.jsonl  # This one?
 
-# New way (1 command, works for both) ⭐
-session-convert convert input.jsonl -o output.jsonl
+# New way (auto-detect source, specify target) ⭐
+session-convert convert input.jsonl --to codex -o output.jsonl
+session-convert convert input.jsonl --to claude -o output.jsonl
 ```
 
-Just use `convert` and let the tool do the thinking! 🚀
+**Why this is better:**
+- 🔍 Source auto-detected (you don't need to know)
+- 🎯 Target explicit (you specify what you want)
+- 🚀 Extensible (ready for Cursor, Aider, markdown, etc.)
+
+Let the tool figure out what you have, you tell it what you want! 🚀
