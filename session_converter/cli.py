@@ -29,6 +29,65 @@ def cli() -> None:
 @cli.command()
 @click.argument('input_file', type=click.Path(exists=True, path_type=Path))
 @click.option('-o', '--output', type=click.Path(path_type=Path), help='Output file path')
+@click.option('--to', 'target_format', type=click.Choice(['claude', 'codex']), help='Target format (auto-detected if not specified)')
+@click.option('--pretty', is_flag=True, help='Pretty-print JSON output')
+@click.option('--validate', is_flag=True, help='Validate output after conversion')
+@click.option('--stats', is_flag=True, help='Show conversion statistics')
+@click.option('-v', '--verbose', is_flag=True, help='Verbose logging')
+def convert(
+    input_file: Path,
+    output: Optional[Path],
+    target_format: Optional[str],
+    pretty: bool,
+    validate: bool,
+    stats: bool,
+    verbose: bool
+) -> None:
+    """Convert session between formats (auto-detects source format).
+    
+    This is the recommended command for converting sessions. It automatically
+    detects whether your input is Claude Code or Codex CLI format and converts
+    to the other format, or to the format you specify with --to.
+    """
+    # Detect source format
+    source_format = detect_format(input_file)
+    
+    if not source_format:
+        console.print("[red]Error:[/red] Could not detect session format")
+        console.print("Please specify formats explicitly using:")
+        console.print("  session-convert claude-to-codex <file>")
+        console.print("  session-convert codex-to-claude <file>")
+        sys.exit(1)
+    
+    if verbose:
+        console.print(f"[cyan]Detected format:[/cyan] {source_format.title()}")
+    
+    # Determine target format
+    if not target_format:
+        # Auto-select opposite format
+        target_format = 'codex' if source_format == 'claude' else 'claude'
+        if verbose:
+            console.print(f"[cyan]Target format:[/cyan] {target_format.title()}")
+    elif target_format == source_format:
+        console.print(f"[yellow]Warning:[/yellow] Source and target formats are the same ({source_format})")
+        console.print("No conversion needed. Use 'session-convert info' to view session details.")
+        sys.exit(0)
+    
+    _convert_session(
+        input_file=input_file,
+        output=output,
+        source_format=source_format,
+        target_format=target_format,
+        pretty=pretty,
+        validate=validate,
+        stats=stats,
+        verbose=verbose
+    )
+
+
+@cli.command()
+@click.argument('input_file', type=click.Path(exists=True, path_type=Path))
+@click.option('-o', '--output', type=click.Path(path_type=Path), help='Output file path')
 @click.option('--pretty', is_flag=True, help='Pretty-print JSON output')
 @click.option('--preserve-unknown', is_flag=True, help='Keep unknown fields in output')
 @click.option('--validate', is_flag=True, help='Validate output after conversion')
@@ -43,7 +102,10 @@ def claude_to_codex(
     stats: bool,
     verbose: bool
 ) -> None:
-    """Convert Claude Code session to Codex CLI format."""
+    """Convert Claude Code session to Codex CLI format.
+    
+    Note: Consider using 'session-convert convert' for automatic format detection.
+    """
     _convert_session(
         input_file=input_file,
         output=output,
@@ -73,7 +135,10 @@ def codex_to_claude(
     stats: bool,
     verbose: bool
 ) -> None:
-    """Convert Codex CLI session to Claude Code format."""
+    """Convert Codex CLI session to Claude Code format.
+    
+    Note: Consider using 'session-convert convert' for automatic format detection.
+    """
     _convert_session(
         input_file=input_file,
         output=output,

@@ -4,6 +4,7 @@ A powerful CLI tool to convert AI assistant sessions between Claude Code and Ope
 
 ## Features
 
+- 🤖 **Auto-Detection**: Automatically detects whether your session is Claude Code or Codex CLI format
 - 🔄 **Bidirectional Conversion**: Convert sessions between Claude Code ↔ Codex CLI formats
 - ✅ **Validation**: Validate session file formats
 - 📊 **Statistics**: View detailed session information and conversion stats
@@ -28,28 +29,56 @@ pip install -e .
 ## Quick Start
 
 ```bash
-# Convert Claude Code session to Codex format
-session-convert claude-to-codex input.jsonl -o output.jsonl
-
-# Convert Codex session to Claude Code format
-session-convert codex-to-claude input.jsonl -o output.jsonl
+# Convert session (auto-detects format) - RECOMMENDED
+session-convert convert input.jsonl -o output.jsonl
 
 # Show session information
 session-convert info input.jsonl
 
 # Validate a session file
-session-convert validate input.jsonl --format claude
+session-convert validate input.jsonl
 
 # Batch convert a directory
 session-convert batch ~/sessions/claude ~/sessions/codex --from claude --to codex
+
+# Explicit format conversion (if needed)
+session-convert claude-to-codex input.jsonl -o output.jsonl
+session-convert codex-to-claude input.jsonl -o output.jsonl
 ```
 
 ## Usage
 
 ### Commands
 
+#### `convert` (Recommended)
+**Auto-detects format** and converts to the opposite format or specified target.
+
+```bash
+session-convert convert <input.jsonl> [OPTIONS]
+
+Options:
+  -o, --output PATH       Output file path (default: stdout)
+  --to [claude|codex]    Target format (auto-detected if not specified)
+  --pretty               Pretty-print JSON output
+  --validate            Validate output after conversion
+  --stats               Show conversion statistics
+  -v, --verbose         Verbose logging
+```
+
+**Examples:**
+```bash
+# Auto-detect and convert (easiest way!)
+session-convert convert my-session.jsonl -o converted.jsonl
+
+# Auto-detect source, specify target
+session-convert convert my-session.jsonl --to codex -o output.jsonl
+
+# With verbose output showing detection
+session-convert convert my-session.jsonl -o output.jsonl --stats -v
+```
+
 #### `claude-to-codex`
-Convert a Claude Code session to Codex CLI format.
+Explicitly convert Claude Code session to Codex CLI format.
 
 ```bash
 session-convert claude-to-codex <input.jsonl> [OPTIONS]
@@ -64,11 +93,13 @@ Options:
 ```
 
 #### `codex-to-claude`
-Convert a Codex CLI session to Claude Code format.
+Explicitly convert Codex CLI session to Claude Code format.
 
 ```bash
 session-convert codex-to-claude <input.jsonl> [OPTIONS]
 ```
+
+**Note:** Consider using `session-convert convert` for automatic format detection.
 
 #### `info`
 Display information about a session file.

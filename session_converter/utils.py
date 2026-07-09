@@ -56,25 +56,56 @@ def generate_uuid() -> str:
 
 
 def detect_format(file_path: Path) -> Optional[str]:
-    """Detect the session format (claude or codex)."""
-    try:
-        for record in read_jsonl(file_path):
-            # Claude format detection
-            if 'type' in record and record['type'] in ['user', 'assistant', 'system', 'progress']:
-                if 'uuid' in record and 'sessionId' in record:
-                    return 'claude'
-            
-            # Codex format detection
-            if 'type' in record and record['type'] in ['session_meta', 'turn_context', 'response_item']:
-                if 'payload' in record:
-                    return 'codex'
-            
-            # Only check first few lines
-            break
-    except Exception:
-        pass
+    """Detect the session format (claude or codex).
     
-    return None
+    Returns:
+        'claude' if Claude Code format detected
+        'codex' if Codex CLI format detected
+        None if format cannot be determined
+    """
+    try:
+        claude_indicators = 0
+        codex_indicators = 0
+        lines_checked = 0
+        max_lines = 5  # Check first 5 lines for confidence
+        
+        for record in read_jsonl(file_path):
+            lines_checked += 1
+            
+            # Claude format indicators
+            if 'uuid' in record and 'parentUuid' in record:
+                claude_indicators += 2
+            if 'sessionId' in record and record.get('type') in ['user', 'assistant', 'system']:
+                claude_indicators += 2
+            if 'gitBranch' in record:
+                claude_indicators += 1
+            if 'message' in record and 'content' in record.get('message', {}):
+                claude_indicators += 1
+            
+            # Codex format indicators
+            if record.get('type') == 'session_meta' and 'payload' in record:
+                codex_indicators += 5  # Strong indicator
+            if record.get('type') in ['turn_context', 'response_item', 'input_item', 'event_msg']:
+                codex_indicators += 2
+            if 'payload' in record:
+                payload = record.get('payload', {})
+                if 'originator' in payload or 'cli_version' in payload:
+                    codex_indicators += 2
+            
+            # Stop after checking enough lines
+            if lines_checked >= max_lines:
+                break
+        
+        # Determine format based on indicators
+        if codex_indicators > claude_indicators:
+            return 'codex'
+        elif claude_indicators > codex_indicators:
+            return 'claude'
+        else:
+            return None
+    
+    except Exception:
+        return None
 
 
 def calculate_duration(start_time: datetime, end_time: datetime) -> str:

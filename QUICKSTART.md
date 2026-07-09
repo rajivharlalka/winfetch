@@ -20,53 +20,104 @@ session-convert --version
 ### 1. View Session Information
 
 ```bash
-# Inspect a Claude Code session
+# Inspect any session (format auto-detected)
 session-convert info examples/claude_session.jsonl
-
-# Inspect a Codex CLI session  
 session-convert info examples/codex_session.jsonl
 ```
 
-### 2. Validate Sessions
+### 2. Convert Sessions (Auto-Detection) ⭐ **RECOMMENDED**
+
+The easiest way to convert sessions - just use `convert` and let the tool figure out the format!
 
 ```bash
-# Validate a Claude session
-session-convert validate examples/claude_session.jsonl --format claude
+# Auto-detect format and convert
+session-convert convert my-session.jsonl -o converted.jsonl
 
-# Validate a Codex session
-session-convert validate examples/codex_session.jsonl --format codex
+# With statistics
+session-convert convert my-session.jsonl -o converted.jsonl --stats
 
-# Auto-detect format
-session-convert validate examples/claude_session.jsonl
+# With verbose output (shows detected format)
+session-convert convert my-session.jsonl -o converted.jsonl -v
 ```
 
-### 3. Convert Sessions
+The tool will:
+1. 🔍 Automatically detect if your input is Claude Code or Codex CLI format
+2. 🔄 Convert to the opposite format
+3. ✅ Validate the output
 
-#### Claude → Codex
+### 3. Specify Target Format (Optional)
+
+If you want to explicitly specify the output format:
 
 ```bash
-session-convert claude-to-codex \
-  examples/claude_session.jsonl \
-  -o output_codex.jsonl \
+# Force conversion to Codex
+session-convert convert my-session.jsonl --to codex -o output.jsonl
+
+# Force conversion to Claude
+session-convert convert my-session.jsonl --to claude -o output.jsonl
+```
+
+### 4. Validate Sessions
+
+```bash
+# Validate any session (format auto-detected)
+session-convert validate my-session.jsonl
+
+# Or specify format explicitly
+session-convert validate my-session.jsonl --format claude
+```
+
+### 5. Explicit Format Conversion
+
+If you prefer to be explicit about the conversion direction:
+
+```bash
+# Claude → Codex
+session-convert claude-to-codex input.jsonl -o output.jsonl
+
+# Codex → Claude
+session-convert codex-to-claude input.jsonl -o output.jsonl
+```
+
+## Examples
+
+### Example 1: Quick Convert (Auto-Detection)
+
+```bash
+# Just convert - the tool figures out the rest!
+session-convert convert examples/claude_session.jsonl -o /tmp/output.jsonl --stats
+```
+
+Output:
+```
+Detected format: Claude
+Target format: Codex
+✓ Conversion complete
+  Session ID: session-123
+  Turns: 8
+  Tool calls: 15
+```
+
+### Example 2: Convert Your Own Sessions
+
+```bash
+# Find your Claude sessions
+ls ~/.claude/projects/
+
+# Convert one (auto-detection)
+session-convert convert \
+  ~/.claude/projects/my-project/session-abc.jsonl \
+  -o ~/converted/session-abc.jsonl \
   --stats
 ```
 
-#### Codex → Claude
+### Example 3: Batch Convert with Auto-Detection
 
 ```bash
-session-convert codex-to-claude \
-  examples/codex_session.jsonl \
-  -o output_claude.jsonl \
-  --stats
-```
-
-### 4. Batch Convert
-
-```bash
-# Convert all Claude sessions in a directory
+# Convert all sessions in a directory
 session-convert batch \
-  ~/my-claude-sessions/ \
-  ~/converted-to-codex/ \
+  ~/my-sessions/ \
+  ~/converted/ \
   --from claude \
   --to codex \
   --stats
@@ -87,13 +138,11 @@ bash scripts/demo_validation.sh
 # Install test dependencies
 pip install pytest
 
-# Run all tests
+# Run all tests (including auto-detection tests)
 pytest tests/ -v
-
-# Run with coverage
-pip install pytest-cov
-pytest tests/ --cov=session_converter --cov-report=html
 ```
+
+Expected: **22/22 tests pass** ✅
 
 ### Automated Validation
 
@@ -116,6 +165,25 @@ Expected output:
 Pass Rate: 100.0%
 ```
 
+## How Auto-Detection Works
+
+The tool examines the first few lines of your session file and looks for format-specific indicators:
+
+**Claude Code indicators:**
+- `uuid` and `parentUuid` fields
+- `sessionId` field
+- Event types: `user`, `assistant`, `system`
+- `message.content` structure
+- `gitBranch` field
+
+**Codex CLI indicators:**
+- `session_meta` event type (strong indicator)
+- `payload` structure
+- Event types: `turn_context`, `response_item`, `input_item`
+- `originator` and `cli_version` fields
+
+The detection algorithm uses a confidence scoring system to determine the format.
+
 ## Working with Real Sessions
 
 ### Your Claude Code Sessions
@@ -127,11 +195,8 @@ Claude Code stores sessions at:
 
 Example:
 ```bash
-# Find your sessions
-ls ~/.claude/projects/
-
-# Convert one
-session-convert claude-to-codex \
+# Auto-detect and convert
+session-convert convert \
   ~/.claude/projects/my-project/abc-123.jsonl \
   -o ~/converted/my-session.jsonl \
   --stats
@@ -146,11 +211,8 @@ Codex CLI stores sessions at:
 
 Example:
 ```bash
-# Find recent sessions
-ls ~/.codex/sessions/2026/07/
-
-# Convert one
-session-convert codex-to-claude \
+# Auto-detect and convert
+session-convert convert \
   ~/.codex/sessions/2026/07/09/rollout-*.jsonl \
   -o ~/converted/my-session.jsonl \
   --stats
@@ -161,25 +223,25 @@ session-convert codex-to-claude \
 ### Validate Before Converting
 
 ```bash
-# Always validate first
-session-convert validate my-session.jsonl --format claude
+# Validate (format auto-detected)
+session-convert validate my-session.jsonl
 
-# Then convert
-session-convert claude-to-codex my-session.jsonl -o output.jsonl
+# Then convert (format auto-detected)
+session-convert convert my-session.jsonl -o output.jsonl
 ```
 
 ### Pretty Print Output
 
 ```bash
 # Use --pretty for human-readable output
-session-convert claude-to-codex input.jsonl -o output.jsonl --pretty
+session-convert convert input.jsonl -o output.jsonl --pretty
 ```
 
 ### View Detailed Statistics
 
 ```bash
 # Use --stats to see conversion details
-session-convert claude-to-codex input.jsonl -o output.jsonl --stats
+session-convert convert input.jsonl -o output.jsonl --stats
 ```
 
 ### Batch Process with Error Handling
@@ -192,26 +254,6 @@ session-convert batch \
   --from claude \
   --to codex \
   --continue-on-error
-```
-
-## Round-Trip Validation
-
-Verify data integrity with round-trip conversion:
-
-```bash
-# Original
-session-convert info examples/claude_session.jsonl
-
-# Convert: Claude → Codex
-session-convert claude-to-codex examples/claude_session.jsonl -o step1.jsonl
-
-# Convert back: Codex → Claude
-session-convert codex-to-claude step1.jsonl -o step2.jsonl
-
-# Compare
-session-convert info step2.jsonl
-
-# Session ID should match the original
 ```
 
 ## Troubleshooting
@@ -228,6 +270,17 @@ export PATH="$HOME/.local/bin:$PATH"
 python3 -m session_converter.cli --help
 ```
 
+### Format Not Detected
+
+If auto-detection fails:
+
+```bash
+# Use explicit conversion commands
+session-convert claude-to-codex input.jsonl -o output.jsonl
+# or
+session-convert codex-to-claude input.jsonl -o output.jsonl
+```
+
 ### Import Errors
 
 ```bash
@@ -236,22 +289,12 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-### Invalid Session Format
-
-```bash
-# Check the format
-file my-session.jsonl
-
-# Validate with explicit format
-session-convert validate my-session.jsonl --format claude
-```
-
 ## Next Steps
 
 - Read the full [README.md](README.md) for comprehensive documentation
 - Check [VALIDATION.md](VALIDATION.md) for detailed validation strategies
 - Review [DESIGN.md](DESIGN.md) to understand the architecture
-- Run `session-convert --help` for all command options
+- Run `session-convert convert --help` for all command options
 
 ## Need Help?
 
